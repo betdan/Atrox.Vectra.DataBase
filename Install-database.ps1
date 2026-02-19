@@ -130,19 +130,19 @@ try {
         $connection.Open()
         Write-Host "Connection successful." -ForegroundColor Green
 
-        # Validate database is empty
-        Write-Host "Validating database is empty..." -ForegroundColor Blue
+        # Validate ATROX schema does not exist
+        Write-Host "Validating ATROX schema does not exist..." -ForegroundColor Blue
 
-        $query = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE'"
+        $query = "SELECT COUNT(*) FROM sys.schemas WHERE name = 'ATROX'"
         $command = $connection.CreateCommand()
         $command.CommandText = $query
-        $tableCount = $command.ExecuteScalar()
+        $schemaCount = $command.ExecuteScalar()
 
-        if ($tableCount -gt 0) {
-            throw "Database is not empty. Installation aborted."
+        if ($schemaCount -gt 0) {
+            throw "Schema ATROX already exists. Installation aborted."
         }
 
-        Write-Host "Database is empty." -ForegroundColor Green
+        Write-Host "Schema ATROX not found." -ForegroundColor Green
         $connection.Close()
 
         $scriptPath = ".\SQLServer\00_Run_All.sql"
@@ -173,27 +173,27 @@ try {
         }
 
         Write-Host "Connection successful." -ForegroundColor Green
-        Write-Host "Validating database is empty..." -ForegroundColor Blue
+        Write-Host "Validating ATROX schema does not exist..." -ForegroundColor Blue
 
-        $tableCountOutput = psql -h $server -p $port -U $user -d $database -q -t -A -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');" | Out-String
-        $tableCountLines  = @($tableCountOutput -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+        $schemaCountOutput = psql -h $server -p $port -U $user -d $database -q -t -A -c "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = 'atrox';" | Out-String
+        $schemaCountLines  = @($schemaCountOutput -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
-        if ($tableCountLines.Count -ne 1) {
-            throw "Unable to determine table count."
+        if ($schemaCountLines.Count -ne 1) {
+            throw "Unable to determine schema state."
         }
 
-        $tableCountText = ([string]$tableCountLines[0]).Trim()
-        [int]$tableCount = 0
+        $schemaCountText = ([string]$schemaCountLines[0]).Trim()
+        [int]$schemaCount = 0
 
-        if (-not [int]::TryParse($tableCountText, [ref]$tableCount)) {
-            throw "Unable to determine table count."
+        if (-not [int]::TryParse($schemaCountText, [ref]$schemaCount)) {
+            throw "Unable to determine schema state."
         }
 
-        if ($tableCount -gt 0) {
-            throw "Database is not empty. Installation aborted."
+        if ($schemaCount -gt 0) {
+            throw "Schema ATROX already exists. Installation aborted."
         }
 
-        Write-Host "Database is empty." -ForegroundColor Green
+        Write-Host "Schema ATROX not found." -ForegroundColor Green
 
         $scriptPath = Join-Path $PSScriptRoot "PostgreSQL\00_Run_All.sql"
 
