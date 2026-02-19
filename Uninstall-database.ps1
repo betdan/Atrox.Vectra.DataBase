@@ -108,7 +108,7 @@ if ($confirm -ne "Y" -and $confirm -ne "y") {
 # -------------------------------------------------
 
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$logFile = "uninstall_log_$timestamp.txt"
+$logFile = Join-Path $PSScriptRoot "uninstall_log_$timestamp.txt"
 
 Write-Host ""
 Write-Host "Validating connection..." -ForegroundColor Blue
@@ -133,58 +133,21 @@ try {
 
         Write-Host "Removing ATROX objects..." -ForegroundColor Blue
 
-        $dropSql = @"
-DECLARE @schema SYSNAME = 'ATROX';
+        $scriptPath = Join-Path $PSScriptRoot "SQLServer\99_Uninstall.sql"
+        if (!(Test-Path $scriptPath)) {
+            throw "SQL file not found: $scriptPath"
+        }
 
-IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = @schema)
-BEGIN
-    DECLARE @sql NVARCHAR(MAX) = N'';
+        if ($authMode -eq "Windows") {
+            sqlcmd -S "$server,$port" -d $database -E -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Host
+        }
+        else {
+            sqlcmd -S "$server,$port" -d $database -U $user -P $password -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Host
+        }
 
-    -- Drop foreign keys that belong to or reference tables in target schema
-    SELECT @sql += N'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(fk.parent_object_id)) + N'.' + QUOTENAME(OBJECT_NAME(fk.parent_object_id)) +
-                   N' DROP CONSTRAINT ' + QUOTENAME(fk.name) + N';' + CHAR(10)
-    FROM sys.foreign_keys fk
-    WHERE OBJECT_SCHEMA_NAME(fk.parent_object_id) = @schema
-       OR OBJECT_SCHEMA_NAME(fk.referenced_object_id) = @schema;
-
-    -- Drop procedures
-    SELECT @sql += N'DROP PROCEDURE ' + QUOTENAME(SCHEMA_NAME(o.schema_id)) + N'.' + QUOTENAME(o.name) + N';' + CHAR(10)
-    FROM sys.objects o
-    WHERE o.schema_id = SCHEMA_ID(@schema)
-      AND o.type IN ('P', 'PC');
-
-    -- Drop functions
-    SELECT @sql += N'DROP FUNCTION ' + QUOTENAME(SCHEMA_NAME(o.schema_id)) + N'.' + QUOTENAME(o.name) + N';' + CHAR(10)
-    FROM sys.objects o
-    WHERE o.schema_id = SCHEMA_ID(@schema)
-      AND o.type IN ('FN', 'IF', 'TF', 'FS', 'FT');
-
-    -- Drop views
-    SELECT @sql += N'DROP VIEW ' + QUOTENAME(SCHEMA_NAME(o.schema_id)) + N'.' + QUOTENAME(o.name) + N';' + CHAR(10)
-    FROM sys.objects o
-    WHERE o.schema_id = SCHEMA_ID(@schema)
-      AND o.type = 'V';
-
-    -- Drop tables
-    SELECT @sql += N'DROP TABLE ' + QUOTENAME(SCHEMA_NAME(t.schema_id)) + N'.' + QUOTENAME(t.name) + N';' + CHAR(10)
-    FROM sys.tables t
-    WHERE t.schema_id = SCHEMA_ID(@schema);
-
-    -- Drop sequences
-    SELECT @sql += N'DROP SEQUENCE ' + QUOTENAME(SCHEMA_NAME(s.schema_id)) + N'.' + QUOTENAME(s.name) + N';' + CHAR(10)
-    FROM sys.sequences s
-    WHERE s.schema_id = SCHEMA_ID(@schema);
-
-    EXEC sp_executesql @sql;
-
-    EXEC(N'DROP SCHEMA ' + QUOTENAME(@schema) + N';');
-END
-"@;
-
-        $command = $connection.CreateCommand()
-        $command.CommandText = $dropSql
-        $command.CommandTimeout = 0
-        [void]$command.ExecuteNonQuery()
+        if ($LASTEXITCODE -ne 0) {
+            throw "Execution failed. Check log file."
+        }
 
         $connection.Close()
         Write-Host "ATROX objects removed successfully." -ForegroundColor Green
@@ -206,7 +169,12 @@ END
         Write-Host "Connection successful." -ForegroundColor Green
         Write-Host "Removing ATROX objects..." -ForegroundColor Blue
 
-        $dropOutput = psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -c "DROP SCHEMA IF EXISTS atrox CASCADE;" 2>&1 | Tee-Object -FilePath $logFile
+        $scriptPath = Join-Path $PSScriptRoot "PostgreSQL\99_Uninstall.sql"
+        if (!(Test-Path $scriptPath)) {
+            throw "SQL file not found: $scriptPath"
+        }
+
+        psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -f $scriptPath 2>&1 | Tee-Object -FilePath $logFile | Out-Host
 
         if ($LASTEXITCODE -ne 0) {
             throw "Execution failed. Check log file."

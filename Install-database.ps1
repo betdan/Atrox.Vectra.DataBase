@@ -107,7 +107,7 @@ if ($confirm -ne "Y" -and $confirm -ne "y") {
 # -------------------------------------------------
 
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$logFile = "install_log_$timestamp.txt"
+$logFile = Join-Path $PSScriptRoot "install_log_$timestamp.txt"
 
 Write-Host ""
 Write-Host "Validating connection..." -ForegroundColor Blue
