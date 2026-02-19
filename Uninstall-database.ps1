@@ -139,10 +139,10 @@ try {
         }
 
         if ($authMode -eq "Windows") {
-            sqlcmd -S "$server,$port" -d $database -E -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Host
+            sqlcmd -S "$server,$port" -d $database -E -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Null
         }
         else {
-            sqlcmd -S "$server,$port" -d $database -U $user -P $password -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Host
+            sqlcmd -S "$server,$port" -d $database -U $user -P $password -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Null
         }
 
         if ($LASTEXITCODE -ne 0) {
@@ -174,7 +174,7 @@ try {
             throw "SQL file not found: $scriptPath"
         }
 
-        psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -f $scriptPath 2>&1 | Tee-Object -FilePath $logFile | Out-Host
+        psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -f $scriptPath 2>&1 | Tee-Object -FilePath $logFile | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
             throw "Execution failed. Check log file."
