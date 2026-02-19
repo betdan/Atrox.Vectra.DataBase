@@ -18,12 +18,7 @@ BEGIN
     CONSTRAINT pk_atrox_screen PRIMARY KEY (sc_id),
     CONSTRAINT uq_atrox_screen_app_code UNIQUE (ap_id, sc_code),
     CONSTRAINT fk_atrox_screen_application FOREIGN KEY (ap_id) REFERENCES ATROX.atrox_application (ap_id)
-);
-
-
-ALTER TABLE ATROX.atrox_screen
-ADD CONSTRAINT fk_atrox_screen_current_version
-FOREIGN KEY (sc_current_version_id) REFERENCES ATROX.atrox_screen_version (sv_id);$sql$;
+);$sql$;
     RAISE NOTICE '<<<CREATED TABLE ATROX.atrox_screen>>>';
 EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE '<<<FAILED CREATING TABLE ATROX.atrox_screen>>>';

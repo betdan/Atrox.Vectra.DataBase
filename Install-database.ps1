@@ -204,7 +204,12 @@ try {
         $postgresScriptDir = Split-Path -Parent $scriptPath
         Push-Location $postgresScriptDir
         try {
-            psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -f $scriptPath -o $logFile
+            $deployOutputLines = psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -f $scriptPath 2>&1 | Tee-Object -FilePath $logFile
+            $deployOutputText = ($deployOutputLines | Out-String)
+
+            if ($LASTEXITCODE -ne 0 -or $deployOutputText -match "<<<FAILED") {
+                throw "Execution failed. Check log file."
+            }
         }
         finally {
             Pop-Location

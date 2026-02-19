@@ -20,12 +20,7 @@ BEGIN
     CONSTRAINT pk_atrox_service PRIMARY KEY (se_id),
     CONSTRAINT uq_atrox_service_screen_code UNIQUE (sc_id, se_code),
     CONSTRAINT fk_atrox_service_screen FOREIGN KEY (sc_id) REFERENCES ATROX.atrox_screen (sc_id)
-);
-
-
-ALTER TABLE ATROX.atrox_service
-ADD CONSTRAINT fk_atrox_service_current_version
-FOREIGN KEY (se_current_version_id) REFERENCES ATROX.atrox_service_version (sv_id);$sql$;
+);$sql$;
     RAISE NOTICE '<<<CREATED TABLE ATROX.atrox_service>>>';
 EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE '<<<FAILED CREATING TABLE ATROX.atrox_service>>>';
