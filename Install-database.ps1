@@ -176,13 +176,13 @@ try {
         Write-Host "Validating database is empty..." -ForegroundColor Blue
 
         $tableCountOutput = psql -h $server -p $port -U $user -d $database -q -t -A -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');" | Out-String
-        $tableCountLines  = $tableCountOutput -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        $tableCountLines  = @($tableCountOutput -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 
         if ($tableCountLines.Count -ne 1) {
             throw "Unable to determine table count."
         }
 
-        $tableCountText = $tableCountLines[0].Trim()
+        $tableCountText = ([string]$tableCountLines[0]).Trim()
         [int]$tableCount = 0
 
         if (-not [int]::TryParse($tableCountText, [ref]$tableCount)) {
