@@ -195,13 +195,19 @@ try {
 
         Write-Host "Database is empty." -ForegroundColor Green
 
-        $scriptPath = ".\PostgreSQL\00_Run_All.sql"
+        $scriptPath = Join-Path $PSScriptRoot "PostgreSQL\00_Run_All.sql"
 
         if (!(Test-Path $scriptPath)) {
             throw "SQL file not found: $scriptPath"
         }
 
-        psql -h $server -p $port -U $user -d $database -f $scriptPath -o $logFile
+        Push-Location $PSScriptRoot
+        try {
+            psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -f $scriptPath -o $logFile
+        }
+        finally {
+            Pop-Location
+        }
     }
 
     if ($LASTEXITCODE -ne 0) {
