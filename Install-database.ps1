@@ -175,10 +175,21 @@ try {
         Write-Host "Connection successful." -ForegroundColor Green
         Write-Host "Validating database is empty..." -ForegroundColor Blue
 
-        $tableCount = psql -h $server -p $port -U $user -d $database -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');"
-        $tableCount = $tableCount.Trim()
+        $tableCountOutput = psql -h $server -p $port -U $user -d $database -q -t -A -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema');" | Out-String
+        $tableCountLines  = $tableCountOutput -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
 
-        if ([int]$tableCount -gt 0) {
+        if ($tableCountLines.Count -ne 1) {
+            throw "Unable to determine table count."
+        }
+
+        $tableCountText = $tableCountLines[0].Trim()
+        [int]$tableCount = 0
+
+        if (-not [int]::TryParse($tableCountText, [ref]$tableCount)) {
+            throw "Unable to determine table count."
+        }
+
+        if ($tableCount -gt 0) {
             throw "Database is not empty. Installation aborted."
         }
 
