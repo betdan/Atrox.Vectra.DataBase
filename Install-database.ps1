@@ -201,7 +201,8 @@ try {
             throw "SQL file not found: $scriptPath"
         }
 
-        Push-Location $PSScriptRoot
+        $postgresScriptDir = Split-Path -Parent $scriptPath
+        Push-Location $postgresScriptDir
         try {
             psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -f $scriptPath -o $logFile
         }
