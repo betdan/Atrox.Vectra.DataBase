@@ -25,10 +25,6 @@ CREATE TABLE ATROX.atrox_action (
 
 
 
-ALTER TABLE
-    ATROX.atrox_action
-ADD
-    CONSTRAINT fk_atrox_action_current_version FOREIGN KEY (ac_current_version_id) REFERENCES ATROX.atrox_action_version (av_id);
     PRINT '<<<CREATED TABLE ATROX.atrox_action>>>';
 END TRY
 BEGIN CATCH

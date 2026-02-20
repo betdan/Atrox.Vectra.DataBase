@@ -24,9 +24,6 @@ CREATE TABLE ATROX.atrox_screen (
 );
 
 
-ALTER TABLE ATROX.atrox_screen
-ADD CONSTRAINT fk_atrox_screen_current_version
-FOREIGN KEY (sc_current_version_id) REFERENCES ATROX.atrox_screen_version (sv_id);
     PRINT '<<<CREATED TABLE ATROX.atrox_screen>>>';
 END TRY
 BEGIN CATCH

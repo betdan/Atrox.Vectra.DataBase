@@ -26,9 +26,6 @@ CREATE TABLE ATROX.atrox_service (
 );
 
 
-ALTER TABLE ATROX.atrox_service
-ADD CONSTRAINT fk_atrox_service_current_version
-FOREIGN KEY (se_current_version_id) REFERENCES ATROX.atrox_service_version (sv_id);
     PRINT '<<<CREATED TABLE ATROX.atrox_service>>>';
 END TRY
 BEGIN CATCH

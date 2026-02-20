@@ -2,25 +2,26 @@ PRINT 'Starting ATROX SQL Server deployment (refactored)';
 PRINT 'Schema';
 :r .\\Schema\\01_Schema.sql
 PRINT 'Tables';
-:r .\\Tables\\atrox_action.sql
-:r .\\Tables\\atrox_action_parameter.sql
-:r .\\Tables\\atrox_action_version.sql
-:r .\\Tables\\atrox_application.sql
 :r .\\Tables\\atrox_company.sql
-:r .\\Tables\\atrox_function.sql
+:r .\\Tables\\atrox_version_status.sql
 :r .\\Tables\\atrox_installation.sql
-:r .\\Tables\\atrox_menu.sql
+:r .\\Tables\\atrox_application.sql
+:r .\\Tables\\atrox_function.sql
 :r .\\Tables\\atrox_role.sql
-:r .\\Tables\\atrox_role_function.sql
-:r .\\Tables\\atrox_screen.sql
-:r .\\Tables\\atrox_screen_function.sql
-:r .\\Tables\\atrox_screen_version.sql
-:r .\\Tables\\atrox_service.sql
-:r .\\Tables\\atrox_service_version.sql
 :r .\\Tables\\atrox_user.sql
+:r .\\Tables\\atrox_screen.sql
+:r .\\Tables\\atrox_service.sql
+:r .\\Tables\\atrox_action.sql
+:r .\\Tables\\atrox_screen_version.sql
+:r .\\Tables\\atrox_service_version.sql
+:r .\\Tables\\atrox_action_version.sql
+:r .\\Tables\\atrox_menu.sql
+:r .\\Tables\\atrox_screen_function.sql
+:r .\\Tables\\atrox_action_parameter.sql
+:r .\\Tables\\atrox_role_function.sql
 :r .\\Tables\\atrox_user_role.sql
 :r .\\Tables\\atrox_version_event.sql
-:r .\\Tables\\atrox_version_status.sql
+:r .\\Tables\\zz_atrox_deferred_current_version_fks.sql
 PRINT 'Indexes';
 :r .\\Indexes\\06_Indexes.sql
 PRINT 'Functions';
@@ -83,4 +84,3 @@ PRINT 'Procedures';
 PRINT 'Seed';
 :r .\\Seed\\09_Seed_Data.sql
 PRINT 'ATROX SQL Server deployment completed';
-
