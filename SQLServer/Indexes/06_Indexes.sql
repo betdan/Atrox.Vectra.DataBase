@@ -1,3 +1,12 @@
+SET ANSI_NULLS ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET ARITHABORT ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET QUOTED_IDENTIFIER ON;
+SET NUMERIC_ROUNDABORT OFF;
+GO
+
 IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_atrox_application_co_id' AND object_id = OBJECT_ID('ATROX.atrox_application','U'))
 BEGIN
     DROP INDEX ix_atrox_application_co_id ON ATROX.atrox_application;
@@ -507,6 +516,7 @@ WHERE vs_id = 2 AND sv_deleted = 0;
     PRINT '<<<CREATED INDEX ATROX.ux_atrox_screen_one_enabled>>>';
 END TRY
 BEGIN CATCH
+    PRINT ERROR_MESSAGE();
     PRINT '<<<FAILED CREATING INDEX ATROX.ux_atrox_screen_one_enabled>>>';
 END CATCH;
 GO
@@ -524,6 +534,7 @@ WHERE vs_id = 2 AND sv_deleted = 0;
     PRINT '<<<CREATED INDEX ATROX.ux_atrox_service_one_enabled>>>';
 END TRY
 BEGIN CATCH
+    PRINT ERROR_MESSAGE();
     PRINT '<<<FAILED CREATING INDEX ATROX.ux_atrox_service_one_enabled>>>';
 END CATCH;
 GO
@@ -541,6 +552,7 @@ WHERE vs_id = 2 AND av_deleted = 0;
     PRINT '<<<CREATED INDEX ATROX.ux_atrox_action_one_enabled>>>';
 END TRY
 BEGIN CATCH
+    PRINT ERROR_MESSAGE();
     PRINT '<<<FAILED CREATING INDEX ATROX.ux_atrox_action_one_enabled>>>';
 END CATCH;
 GO
