@@ -145,7 +145,7 @@ try {
         Write-Host "Schema ATROX not found." -ForegroundColor Green
         $connection.Close()
 
-        $scriptPath = ".\SQLServer\00_Run_All.sql"
+        $scriptPath = Join-Path $PSScriptRoot "SQLServer\00_Run_All.sql"
 
         if (!(Test-Path $scriptPath)) {
             throw "SQL file not found: $scriptPath"
@@ -156,6 +156,10 @@ try {
         }
         else {
             sqlcmd -S "$server,$port" -d $database -U $user -P $password -i $scriptPath -b -o $logFile
+        }
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "SQL Server deployment failed (exit code $LASTEXITCODE). Check log file: $logFile"
         }
     }
 
@@ -214,10 +218,6 @@ try {
         finally {
             Pop-Location
         }
-    }
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Execution failed. Check log file."
     }
 
     # -------------------------------------------------
