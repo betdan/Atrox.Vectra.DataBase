@@ -151,15 +151,22 @@ try {
             throw "SQL file not found: $scriptPath"
         }
 
-        if ($authMode -eq "Windows") {
-            sqlcmd -S "$server,$port" -d $database -E -i $scriptPath -b -o $logFile
-        }
-        else {
-            sqlcmd -S "$server,$port" -d $database -U $user -P $password -i $scriptPath -b -o $logFile
-        }
+        $sqlServerScriptDir = Split-Path -Parent $scriptPath
+        Push-Location $sqlServerScriptDir
+        try {
+            if ($authMode -eq "Windows") {
+                sqlcmd -S "$server,$port" -d $database -E -i $scriptPath -b -o $logFile
+            }
+            else {
+                sqlcmd -S "$server,$port" -d $database -U $user -P $password -i $scriptPath -b -o $logFile
+            }
 
-        if ($LASTEXITCODE -ne 0) {
-            throw "SQL Server deployment failed (exit code $LASTEXITCODE). Check log file: $logFile"
+            if ($LASTEXITCODE -ne 0) {
+                throw "SQL Server deployment failed (exit code $LASTEXITCODE). Check log file: $logFile"
+            }
+        }
+        finally {
+            Pop-Location
         }
     }
 
@@ -240,6 +247,7 @@ catch {
     Write-Host " Check log file: $logFile" -ForegroundColor Red
     Write-Host "=============================================" -ForegroundColor Red
 
-    $_ | Out-File $logFile
+    $_ | Out-File -FilePath $logFile -Append
     exit 1
 }
+
