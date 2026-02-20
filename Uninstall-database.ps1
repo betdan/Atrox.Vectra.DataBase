@@ -138,15 +138,22 @@ try {
             throw "SQL file not found: $scriptPath"
         }
 
-        if ($authMode -eq "Windows") {
-            sqlcmd -S "$server,$port" -d $database -E -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Null
-        }
-        else {
-            sqlcmd -S "$server,$port" -d $database -U $user -P $password -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Null
-        }
+        $sqlServerScriptDir = Split-Path -Parent $scriptPath
+        Push-Location $sqlServerScriptDir
+        try {
+            if ($authMode -eq "Windows") {
+                sqlcmd -S "$server,$port" -d $database -E -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Null
+            }
+            else {
+                sqlcmd -S "$server,$port" -d $database -U $user -P $password -i $scriptPath -b 2>&1 | Tee-Object -FilePath $logFile | Out-Null
+            }
 
-        if ($LASTEXITCODE -ne 0) {
-            throw "Execution failed. Check log file."
+            if ($LASTEXITCODE -ne 0) {
+                throw "SQL Server uninstall failed (exit code $LASTEXITCODE). Check log file: $logFile"
+            }
+        }
+        finally {
+            Pop-Location
         }
 
         $connection.Close()
@@ -177,7 +184,7 @@ try {
         psql -h $server -p $port -U $user -d $database -v ON_ERROR_STOP=1 -f $scriptPath 2>&1 | Tee-Object -FilePath $logFile | Out-Null
 
         if ($LASTEXITCODE -ne 0) {
-            throw "Execution failed. Check log file."
+            throw "PostgreSQL uninstall failed (exit code $LASTEXITCODE). Check log file: $logFile"
         }
 
         Write-Host "ATROX schema removed successfully." -ForegroundColor Green
@@ -203,6 +210,6 @@ catch {
     Write-Host " Check log file: $logFile" -ForegroundColor Red
     Write-Host "=============================================" -ForegroundColor Red
 
-    $_ | Out-File $logFile
+    $_ | Out-File -FilePath $logFile -Append
     exit 1
 }
