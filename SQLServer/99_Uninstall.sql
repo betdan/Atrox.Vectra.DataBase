@@ -56,7 +56,8 @@ BEGIN TRY
             EXEC sp_executesql @sql;
         END
 
-        EXEC(N'DROP SCHEMA ' + QUOTENAME(@schema) + N';');
+        DECLARE @dropSchemaSql NVARCHAR(MAX) = N'DROP SCHEMA ' + QUOTENAME(@schema) + N';';
+        EXEC sp_executesql @dropSchemaSql;
         PRINT '<<<ATROX UNINSTALL COMPLETED>>>';
     END
     ELSE
