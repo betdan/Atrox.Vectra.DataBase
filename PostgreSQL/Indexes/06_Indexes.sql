@@ -405,3 +405,27 @@ EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE '<<<FAILED CREATING INDEX ATROX.ux_atrox_action_one_enabled>>>';
 END
 $do$;
+
+DROP INDEX IF EXISTS ATROX.ix_atrox_security_client_api_key_hash;
+DO $do$ BEGIN RAISE NOTICE '<<<DROPPED INDEX ATROX.ix_atrox_security_client_api_key_hash>>>'; END $do$;
+
+DO $do$
+BEGIN
+    EXECUTE $sql$CREATE INDEX ix_atrox_security_client_api_key_hash ON ATROX.atrox_security_client (api_key_hash);$sql$;
+    RAISE NOTICE '<<<CREATED INDEX ATROX.ix_atrox_security_client_api_key_hash>>>';
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE '<<<FAILED CREATING INDEX ATROX.ix_atrox_security_client_api_key_hash>>>';
+END
+$do$;
+
+DROP INDEX IF EXISTS ATROX.ix_atrox_security_client_company_id;
+DO $do$ BEGIN RAISE NOTICE '<<<DROPPED INDEX ATROX.ix_atrox_security_client_company_id>>>'; END $do$;
+
+DO $do$
+BEGIN
+    EXECUTE $sql$CREATE INDEX ix_atrox_security_client_company_id ON ATROX.atrox_security_client (company_id);$sql$;
+    RAISE NOTICE '<<<CREATED INDEX ATROX.ix_atrox_security_client_company_id>>>';
+EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE '<<<FAILED CREATING INDEX ATROX.ix_atrox_security_client_company_id>>>';
+END
+$do$;

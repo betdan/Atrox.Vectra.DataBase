@@ -21,6 +21,7 @@ PRINT 'Tables';
 :r .\\Tables\\atrox_role_function.sql
 :r .\\Tables\\atrox_user_role.sql
 :r .\\Tables\\atrox_version_event.sql
+:r .\\Tables\\atrox_security_client.sql
 :r .\\Tables\\zz_atrox_deferred_current_version_fks.sql
 PRINT 'Indexes';
 :r .\\Indexes\\06_Indexes.sql

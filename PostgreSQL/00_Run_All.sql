@@ -21,6 +21,7 @@
 \i ./Tables/atrox_screen_function.sql
 \i ./Tables/atrox_user_role.sql
 \i ./Tables/atrox_menu.sql
+\i ./Tables/atrox_security_client.sql
 \i ./Tables/atrox_current_version_constraints.sql
 \echo Indexes
 \i ./Indexes/06_Indexes.sql

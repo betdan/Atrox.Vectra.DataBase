@@ -556,3 +556,35 @@ BEGIN CATCH
     PRINT '<<<FAILED CREATING INDEX ATROX.ux_atrox_action_one_enabled>>>';
 END CATCH;
 GO
+
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_atrox_security_client_api_key_hash' AND object_id = OBJECT_ID('ATROX.atrox_security_client','U'))
+BEGIN
+    DROP INDEX ix_atrox_security_client_api_key_hash ON ATROX.atrox_security_client;
+    PRINT '<<<DROPPED INDEX ATROX.ix_atrox_security_client_api_key_hash>>>';
+END;
+GO
+
+BEGIN TRY
+CREATE INDEX ix_atrox_security_client_api_key_hash ON ATROX.atrox_security_client (api_key_hash);
+    PRINT '<<<CREATED INDEX ATROX.ix_atrox_security_client_api_key_hash>>>';
+END TRY
+BEGIN CATCH
+    PRINT '<<<FAILED CREATING INDEX ATROX.ix_atrox_security_client_api_key_hash>>>';
+END CATCH;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_atrox_security_client_company_id' AND object_id = OBJECT_ID('ATROX.atrox_security_client','U'))
+BEGIN
+    DROP INDEX ix_atrox_security_client_company_id ON ATROX.atrox_security_client;
+    PRINT '<<<DROPPED INDEX ATROX.ix_atrox_security_client_company_id>>>';
+END;
+GO
+
+BEGIN TRY
+CREATE INDEX ix_atrox_security_client_company_id ON ATROX.atrox_security_client (company_id);
+    PRINT '<<<CREATED INDEX ATROX.ix_atrox_security_client_company_id>>>';
+END TRY
+BEGIN CATCH
+    PRINT '<<<FAILED CREATING INDEX ATROX.ix_atrox_security_client_company_id>>>';
+END CATCH;
+GO
