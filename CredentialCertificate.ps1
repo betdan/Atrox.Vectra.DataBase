@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Subject = "CN=AtroxDbCreds",
+    [string]$Subject = "CN=AtroxCreds",
 
     [ValidateRange(1, 10)]
     [int]$YearsValid = 2,
@@ -25,18 +25,34 @@ if (-not (Test-Path -LiteralPath $OutputDirectory)) {
 $certStorePath = "Cert:\{0}\My" -f $StoreLocation
 $notAfter = (Get-Date).AddYears($YearsValid)
 
-$cert = New-SelfSignedCertificate `
-    -Subject $Subject `
-    -Type DocumentEncryptionCert `
-    -CertStoreLocation $certStorePath `
-    -KeyExportPolicy Exportable `
-    -NotAfter $notAfter
+try {
+    $cert = New-SelfSignedCertificate `
+        -Subject $Subject `
+        -Type Custom `
+        -CertStoreLocation $certStorePath `
+        -KeyAlgorithm RSA `
+        -KeyLength 2048 `
+        -KeySpec KeyExchange `
+        -KeyExportPolicy Exportable `
+        -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
+        -TextExtension @(
+            "2.5.29.37={text}1.3.6.1.4.1.311.80.1"
+        ) `
+        -NotAfter $notAfter
+}
+catch {
+    throw ("Failed to create credential certificate. Error: {0}" -f $_.Exception.Message)
+}
 
 $thumbprint = $cert.Thumbprint
 $safeThumbprint = $thumbprint.ToUpperInvariant()
-$publicPath = Join-Path $OutputDirectory ("AtroxDbCreds_{0}.cer" -f $safeThumbprint)
+$expirationSuffix = $notAfter.ToString("yyyyMMdd")
+$publicPath = Join-Path $OutputDirectory ("AtroxCreds_{0}_exp{1}.cer" -f $safeThumbprint, $expirationSuffix)
 
 Export-Certificate -Cert $cert -FilePath $publicPath | Out-Null
+if (-not (Test-Path -LiteralPath $publicPath)) {
+    throw ("Public certificate export failed. File not found: {0}" -f $publicPath)
+}
 
 $privatePath = $null
 if ($ExportPrivateKey) {
@@ -44,8 +60,22 @@ if ($ExportPrivateKey) {
         $PfxPassword = Read-Host "PFX password" -AsSecureString
     }
 
-    $privatePath = Join-Path $OutputDirectory ("AtroxDbCreds_{0}.pfx" -f $safeThumbprint)
-    Export-PfxCertificate -Cert $cert -FilePath $privatePath -Password $PfxPassword | Out-Null
+    $privatePath = Join-Path $OutputDirectory ("AtroxCreds_{0}_exp{1}.pfx" -f $safeThumbprint, $expirationSuffix)
+    try {
+        Export-PfxCertificate -Cert $cert -FilePath $privatePath -Password $PfxPassword | Out-Null
+    }
+    catch {
+        throw ("Private key export failed. Verify export policies and permissions. Error: {0}" -f $_.Exception.Message)
+    }
+
+    if (-not (Test-Path -LiteralPath $privatePath)) {
+        throw ("Private key export failed. File not found: {0}" -f $privatePath)
+    }
+
+    $privateFile = Get-Item -LiteralPath $privatePath
+    if ($privateFile.Length -le 0) {
+        throw ("Private key export failed. Empty file: {0}" -f $privatePath)
+    }
 }
 
 Write-Host ""
