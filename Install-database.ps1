@@ -9,7 +9,11 @@ Write-Host ""
 function Read-SecureCredentialFile {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$FilePath
+        [string]$FilePath,
+
+        [string]$PfxPath,
+
+        [SecureString]$PfxPassword
     )
 
     if (-not (Test-Path -LiteralPath $FilePath)) {
@@ -36,8 +40,46 @@ function Read-SecureCredentialFile {
         $payloadText = [System.Text.Encoding]::UTF8.GetString($plainBytes)
     }
     elseif ($envelope.algorithm -eq "CertificateCMS") {
-        $cmsMessage = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([string]$envelope.data))
-        $payloadText = Unprotect-CmsMessage -Content $cmsMessage
+        if ([string]::IsNullOrWhiteSpace($PfxPath)) {
+            throw "PFX file path is required for CertificateCMS secure files."
+        }
+
+        if (-not (Test-Path -LiteralPath $PfxPath)) {
+            throw "PFX file not found: $PfxPath"
+        }
+
+        if ($null -eq $PfxPassword) {
+            throw "PFX password is required for CertificateCMS secure files."
+        }
+
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($PfxPassword)
+        $plainPfxPassword = $null
+        try {
+            $plainPfxPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        }
+        finally {
+            if ($bstr -ne [IntPtr]::Zero) {
+                [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+            }
+        }
+
+        if ([string]::IsNullOrWhiteSpace($plainPfxPassword)) {
+            throw "PFX password cannot be empty."
+        }
+
+        $cmsCert = $null
+        try {
+            $flags = [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet
+            $cmsCert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new($PfxPath, $plainPfxPassword, $flags)
+
+            $cmsMessage = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([string]$envelope.data))
+            $payloadText = Unprotect-CmsMessage -Content $cmsMessage -To $cmsCert
+        }
+        finally {
+            if ($null -ne $cmsCert) {
+                $cmsCert.Dispose()
+            }
+        }
     }
     else {
         throw "Unsupported secure credential algorithm: $($envelope.algorithm)"
@@ -156,7 +198,22 @@ if ($engine -eq "SQLServer" -and $authMode -eq "Windows") {
 }
 elseif ($authMode -eq "SecureFile") {
     $credentialFilePath = Read-Host "Secure credential file path (.enc)"
-    $secureCredential = Read-SecureCredentialFile -FilePath $credentialFilePath
+    $pfxPath = $null
+    $pfxPassword = $null
+
+    try {
+        $fileEnvelope = (Get-Content -LiteralPath $credentialFilePath -Raw | ConvertFrom-Json)
+    }
+    catch {
+        throw "Unable to read secure credential file metadata."
+    }
+
+    if ($fileEnvelope.algorithm -eq "CertificateCMS") {
+        $pfxPath = Read-Host "PFX file path (.pfx)"
+        $pfxPassword = Read-Host "PFX password" -AsSecureString
+    }
+
+    $secureCredential = Read-SecureCredentialFile -FilePath $credentialFilePath -PfxPath $pfxPath -PfxPassword $pfxPassword
 
     if (-not [string]::Equals($secureCredential.DbType, $engine, [StringComparison]::OrdinalIgnoreCase)) {
         throw "Secure credential file DB type '$($secureCredential.DbType)' does not match selected engine '$engine'."

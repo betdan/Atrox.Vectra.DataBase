@@ -49,6 +49,10 @@ function Resolve-CmsRecipient {
         [string]$Path
     )
 
+    if (-not [string]::IsNullOrWhiteSpace($Thumbprint)) {
+        throw "Certificate thumbprint mode is not supported in file-only mode. Use -CertificatePath with a .cer file."
+    }
+
     if (-not [string]::IsNullOrWhiteSpace($Path)) {
         if (-not (Test-Path -LiteralPath $Path)) {
             throw "Certificate file not found: $Path"
@@ -56,20 +60,7 @@ function Resolve-CmsRecipient {
         return $Path
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($Thumbprint)) {
-        $normalized = ($Thumbprint -replace '\s', '').ToUpperInvariant()
-        $cert = Get-ChildItem -Path Cert:\CurrentUser\My, Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
-            Where-Object { $_.Thumbprint -eq $normalized } |
-            Select-Object -First 1
-
-        if ($null -eq $cert) {
-            throw "Certificate with thumbprint '$Thumbprint' not found in CurrentUser/My or LocalMachine/My."
-        }
-
-        return $cert
-    }
-
-    throw "For CertificateCMS mode, provide -CertificatePath or -CertificateThumbprint."
+    throw "For CertificateCMS mode, provide -CertificatePath (.cer)."
 }
 
 if ([string]::IsNullOrWhiteSpace($DbType)) {
@@ -133,10 +124,7 @@ else {
     $cmsMessage = Protect-CmsMessage -To $recipient -Content $payloadJson
     $envelope.data = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($cmsMessage))
 
-    if (-not [string]::IsNullOrWhiteSpace($CertificateThumbprint)) {
-        $envelope.certificateThumbprint = ($CertificateThumbprint -replace '\s', '').ToUpperInvariant()
-    }
-    elseif (-not [string]::IsNullOrWhiteSpace($CertificatePath)) {
+    if (-not [string]::IsNullOrWhiteSpace($CertificatePath)) {
         $envelope.certificatePath = $CertificatePath
     }
 }

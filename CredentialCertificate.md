@@ -12,11 +12,11 @@ This document describes how to use `CredentialCertificate.ps1` to create encrypt
 
 - `-Subject`  
   Certificate subject name.  
-  Default: `CN=AtroxDbCreds`.
+  Default: `CN=AtroxCreds`.
 
-- `-YearsValid`  
-  Certificate validity in years.  
-  Range: `1..10`. Default: `2`.
+- `-DaysValid`  
+  Certificate validity in days.  
+  Range: `1..3650`. Default: `365`.
 
 - `-StoreLocation`  
   Store where certificate is created.  
@@ -65,8 +65,8 @@ $pwd = Read-Host "PFX password" -AsSecureString
 
 ```powershell
 .\CredentialCertificate.ps1 `
-  -Subject "CN=AtroxDbCreds" `
-  -YearsValid 3 `
+  -Subject "CN=AtroxCreds" `
+  -DaysValid 365 `
   -StoreLocation CurrentUser `
   -OutputDirectory .\certs `
   -ExportPrivateKey
@@ -82,10 +82,10 @@ Use generated `.cer` to encrypt credentials in `CertificateCMS` mode:
   -Username sa `
   -ValidDays 30 `
   -EncryptionMode CertificateCMS `
-  -CertificatePath .\certs\AtroxDbCreds_<THUMBPRINT>.cer
+  -CertificatePath .\certs\AtroxCreds_<THUMBPRINT>_expYYYYMMDD.cer
 ```
 
-Install/Uninstall then uses `Secure Credential File` mode and decrypts with the private key available in Windows certificate store (or imported from `.pfx`).
+Install/Uninstall then uses `Secure Credential File` mode and decrypts with physical `.pfx` + password (no certificate store required).
 
 ## Security Notes
 

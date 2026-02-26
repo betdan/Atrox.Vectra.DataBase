@@ -2,8 +2,8 @@
 param(
     [string]$Subject = "CN=AtroxCreds",
 
-    [ValidateRange(1, 10)]
-    [int]$YearsValid = 2,
+    [ValidateRange(1, 3650)]
+    [int]$DaysValid = 365,
 
     [ValidateSet("CurrentUser", "LocalMachine")]
     [string]$StoreLocation = "CurrentUser",
@@ -23,7 +23,7 @@ if (-not (Test-Path -LiteralPath $OutputDirectory)) {
 }
 
 $certStorePath = "Cert:\{0}\My" -f $StoreLocation
-$notAfter = (Get-Date).AddYears($YearsValid)
+$notAfter = (Get-Date).AddDays($DaysValid)
 
 try {
     $cert = New-SelfSignedCertificate `
