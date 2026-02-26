@@ -6,6 +6,62 @@ Write-Host " ATROX VECTRA DATABASE INSTALLER"
 Write-Host "============================================="
 Write-Host ""
 
+function Read-SecureCredentialFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath
+    )
+
+    if (-not (Test-Path -LiteralPath $FilePath)) {
+        throw "Secure credential file not found: $FilePath"
+    }
+
+    $envelopeText = Get-Content -LiteralPath $FilePath -Raw
+    $envelope = $envelopeText | ConvertFrom-Json
+
+    if ([string]::IsNullOrWhiteSpace([string]$envelope.algorithm) -or [string]::IsNullOrWhiteSpace([string]$envelope.data)) {
+        throw "Invalid secure credential file format."
+    }
+
+    $payloadText = $null
+    if ($envelope.algorithm -eq "DPAPI") {
+        $scope = [System.Security.Cryptography.DataProtectionScope]::CurrentUser
+        if ($envelope.scope -eq "LocalMachine") {
+            $scope = [System.Security.Cryptography.DataProtectionScope]::LocalMachine
+        }
+
+        $entropy = [System.Text.Encoding]::UTF8.GetBytes("Atrox.Vectra.DataBase.DbCredentialFile.v1")
+        $cipherBytes = [Convert]::FromBase64String([string]$envelope.data)
+        $plainBytes = [System.Security.Cryptography.ProtectedData]::Unprotect($cipherBytes, $entropy, $scope)
+        $payloadText = [System.Text.Encoding]::UTF8.GetString($plainBytes)
+    }
+    elseif ($envelope.algorithm -eq "CertificateCMS") {
+        $cmsMessage = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([string]$envelope.data))
+        $payloadText = Unprotect-CmsMessage -Content $cmsMessage
+    }
+    else {
+        throw "Unsupported secure credential algorithm: $($envelope.algorithm)"
+    }
+
+    $payload = $payloadText | ConvertFrom-Json
+
+    if ([string]::IsNullOrWhiteSpace([string]$payload.username) -or [string]::IsNullOrWhiteSpace([string]$payload.password)) {
+        throw "Invalid credential payload. Username or password is missing."
+    }
+
+    $expiresUtc = [DateTime]::Parse([string]$payload.expiresUtc, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
+    if ($expiresUtc -le [DateTime]::UtcNow) {
+        throw "Secure credential file has expired: $($expiresUtc.ToString('o'))"
+    }
+
+    return [PSCustomObject]@{
+        DbType     = [string]$payload.dbType
+        Username   = [string]$payload.username
+        Password   = [string]$payload.password
+        ExpiresUtc = $expiresUtc
+    }
+}
+
 # -------------------------------------------------
 # ENGINE SELECTION
 # -------------------------------------------------
@@ -37,12 +93,33 @@ if ($engine -eq "SQLServer") {
     Write-Host "Authentication Mode:"
     Write-Host "1) SQL Authentication"
     Write-Host "2) Windows Authentication"
+    Write-Host "3) Secure Credential File"
 
     $authOption = Read-Host "Select authentication mode"
 
     switch ($authOption) {
         "1" { $authMode = "SQL" }
         "2" { $authMode = "Windows" }
+        "3" { $authMode = "SecureFile" }
+        default {
+            Write-Host "Invalid authentication mode." -ForegroundColor Red
+            exit 1
+        }
+    }
+
+    Write-Host "Selected authentication: $authMode" -ForegroundColor Green
+    Write-Host ""
+}
+else {
+    Write-Host "Authentication Mode:"
+    Write-Host "1) SQL Authentication"
+    Write-Host "2) Secure Credential File"
+
+    $authOption = Read-Host "Select authentication mode"
+
+    switch ($authOption) {
+        "1" { $authMode = "SQL" }
+        "2" { $authMode = "SecureFile" }
         default {
             Write-Host "Invalid authentication mode." -ForegroundColor Red
             exit 1
@@ -76,6 +153,18 @@ if ([string]::IsNullOrWhiteSpace($database)) {
 if ($engine -eq "SQLServer" -and $authMode -eq "Windows") {
     $user = $null
     $password = $null
+}
+elseif ($authMode -eq "SecureFile") {
+    $credentialFilePath = Read-Host "Secure credential file path (.enc)"
+    $secureCredential = Read-SecureCredentialFile -FilePath $credentialFilePath
+
+    if (-not [string]::Equals($secureCredential.DbType, $engine, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Secure credential file DB type '$($secureCredential.DbType)' does not match selected engine '$engine'."
+    }
+
+    $user = $secureCredential.Username
+    $password = $secureCredential.Password
+    Write-Host "Secure credentials loaded. Expires at (UTC): $($secureCredential.ExpiresUtc.ToString('o'))" -ForegroundColor Green
 }
 else {
     $user = Read-Host "User"
