@@ -64,7 +64,26 @@ function Resolve-CmsRecipient {
 }
 
 if ([string]::IsNullOrWhiteSpace($DbType)) {
-    $DbType = Read-Host "Database type (SqlServer/PostgreSql)"
+    Write-Host "Select Database Type:"
+    Write-Host "1) SQL Server"
+    Write-Host "2) PostgreSQL"
+
+    $dbOption = Read-Host "Enter option number"
+    switch ($dbOption) {
+        "1" { $DbType = "SqlServer" }
+        "2" { $DbType = "PostgreSql" }
+        default { throw "Invalid selection. Use 1 for SQL Server or 2 for PostgreSQL." }
+    }
+}
+else {
+    switch ($DbType.Trim().ToLowerInvariant()) {
+        "sqlserver" { $DbType = "SqlServer" }
+        "sql" { $DbType = "SqlServer" }
+        "postgresql" { $DbType = "PostgreSql" }
+        "postgres" { $DbType = "PostgreSql" }
+        "pgsql" { $DbType = "PostgreSql" }
+        default { throw "Invalid DbType '$DbType'. Allowed values: SqlServer or PostgreSql." }
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($Username)) {
