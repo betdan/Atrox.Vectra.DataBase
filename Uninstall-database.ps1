@@ -254,7 +254,11 @@ if ($confirm -ne "Y" -and $confirm -ne "y") {
 # -------------------------------------------------
 
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$logFile = Join-Path $PSScriptRoot "uninstall_log_$timestamp.txt"
+$logsDirectory = Join-Path $PSScriptRoot "logs"
+if (-not (Test-Path -LiteralPath $logsDirectory)) {
+    New-Item -Path $logsDirectory -ItemType Directory -Force | Out-Null
+}
+$logFile = Join-Path $logsDirectory "uninstall_log_$timestamp.txt"
 
 Write-Host ""
 Write-Host "Validating connection..." -ForegroundColor Blue
