@@ -19,8 +19,9 @@ This document describes how to use `CredentialCertificate.ps1` to create encrypt
   Range: `1..3650`. Default: `365`.
 
 - `-StoreLocation`  
-  Store where certificate is created.  
-  Values: `CurrentUser`, `LocalMachine`. Default: `CurrentUser`.
+  Backward-compatibility parameter.  
+  In current file-only mode, certificate is not written to Windows store.
+  Values kept: `CurrentUser`, `LocalMachine`. Default: `CurrentUser`.
 
 - `-OutputDirectory`  
   Output folder for exported files (`.cer` and optionally `.pfx`).  

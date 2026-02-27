@@ -5,6 +5,7 @@ param(
     [ValidateRange(1, 3650)]
     [int]$DaysValid = 365,
 
+    # Kept for backward compatibility with previous script calls.
     [ValidateSet("CurrentUser", "LocalMachine")]
     [string]$StoreLocation = "CurrentUser",
 
@@ -18,27 +19,66 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-if (-not (Test-Path -LiteralPath $OutputDirectory)) {
-    New-Item -Path $OutputDirectory -ItemType Directory -Force | Out-Null
+function Get-PlainTextFromSecureString {
+    param(
+        [Parameter(Mandatory = $true)]
+        [SecureString]$SecureValue
+    )
+
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureValue)
+    try {
+        return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+    }
+    finally {
+        if ($bstr -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
 }
 
-$certStorePath = "Cert:\{0}\My" -f $StoreLocation
+if (-not (Test-Path -LiteralPath $OutputDirectory)) {
+    if (-not [System.IO.Path]::IsPathRooted($OutputDirectory)) {
+        $OutputDirectory = Join-Path $PSScriptRoot $OutputDirectory
+    }
+    New-Item -Path $OutputDirectory -ItemType Directory -Force | Out-Null
+}
+else {
+    if (-not [System.IO.Path]::IsPathRooted($OutputDirectory)) {
+        $OutputDirectory = Join-Path $PSScriptRoot $OutputDirectory
+    }
+}
+
+$notBefore = (Get-Date).AddMinutes(-5)
 $notAfter = (Get-Date).AddDays($DaysValid)
+$cert = $null
+$rsa = $null
 
 try {
-    $cert = New-SelfSignedCertificate `
-        -Subject $Subject `
-        -Type Custom `
-        -CertStoreLocation $certStorePath `
-        -KeyAlgorithm RSA `
-        -KeyLength 2048 `
-        -KeySpec KeyExchange `
-        -KeyExportPolicy Exportable `
-        -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
-        -TextExtension @(
-            "2.5.29.37={text}1.3.6.1.4.1.311.80.1"
-        ) `
-        -NotAfter $notAfter
+    $rsa = [System.Security.Cryptography.RSA]::Create(2048)
+    $request = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new(
+        $Subject,
+        $rsa,
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256,
+        [System.Security.Cryptography.RSASignaturePadding]::Pkcs1
+    )
+
+    $request.CertificateExtensions.Add(
+        [System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($false, $false, 0, $true)
+    )
+    $request.CertificateExtensions.Add(
+        [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new(
+            [System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyEncipherment,
+            $true
+        )
+    )
+
+    $ekuOids = [System.Security.Cryptography.OidCollection]::new()
+    [void]$ekuOids.Add([System.Security.Cryptography.Oid]::new("1.3.6.1.4.1.311.80.1"))
+    $request.CertificateExtensions.Add(
+        [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($ekuOids, $false)
+    )
+
+    $cert = $request.CreateSelfSigned($notBefore, $notAfter)
 }
 catch {
     throw ("Failed to create credential certificate. Error: {0}" -f $_.Exception.Message)
@@ -49,9 +89,12 @@ $safeThumbprint = $thumbprint.ToUpperInvariant()
 $expirationSuffix = $notAfter.ToString("yyyyMMdd")
 $publicPath = Join-Path $OutputDirectory ("AtroxCreds_{0}_exp{1}.cer" -f $safeThumbprint, $expirationSuffix)
 
-Export-Certificate -Cert $cert -FilePath $publicPath | Out-Null
-if (-not (Test-Path -LiteralPath $publicPath)) {
-    throw ("Public certificate export failed. File not found: {0}" -f $publicPath)
+try {
+    $cerBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+    [System.IO.File]::WriteAllBytes($publicPath, $cerBytes)
+}
+catch {
+    throw ("Public certificate export failed. Error: {0}" -f $_.Exception.Message)
 }
 
 $privatePath = $null
@@ -62,10 +105,12 @@ if ($ExportPrivateKey) {
 
     $privatePath = Join-Path $OutputDirectory ("AtroxCreds_{0}_exp{1}.pfx" -f $safeThumbprint, $expirationSuffix)
     try {
-        Export-PfxCertificate -Cert $cert -FilePath $privatePath -Password $PfxPassword | Out-Null
+        $plainPfxPassword = Get-PlainTextFromSecureString -SecureValue $PfxPassword
+        $pfxBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pfx, $plainPfxPassword)
+        [System.IO.File]::WriteAllBytes($privatePath, $pfxBytes)
     }
     catch {
-        throw ("Private key export failed. Verify export policies and permissions. Error: {0}" -f $_.Exception.Message)
+        throw ("Private key export failed. Error: {0}" -f $_.Exception.Message)
     }
 
     if (-not (Test-Path -LiteralPath $privatePath)) {
@@ -78,11 +123,18 @@ if ($ExportPrivateKey) {
     }
 }
 
+if ($null -ne $cert) {
+    $cert.Dispose()
+}
+if ($null -ne $rsa) {
+    $rsa.Dispose()
+}
+
 Write-Host ""
 Write-Host "Credential certificate created successfully." -ForegroundColor Green
 Write-Host ("  Subject:        {0}" -f $Subject)
 Write-Host ("  Thumbprint:     {0}" -f $safeThumbprint)
-Write-Host ("  Store Location: {0}" -f $certStorePath)
+Write-Host ("  Store Location: {0} (not used in file-only mode)" -f $StoreLocation)
 Write-Host ("  Expires:        {0}" -f $notAfter.ToString("o"))
 Write-Host ("  Public (.cer):  {0}" -f $publicPath)
 if ($ExportPrivateKey) {
