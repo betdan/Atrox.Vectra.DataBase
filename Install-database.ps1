@@ -257,7 +257,7 @@ $logsDirectory = Join-Path $PSScriptRoot "logs"
 if (-not (Test-Path -LiteralPath $logsDirectory)) {
     New-Item -Path $logsDirectory -ItemType Directory -Force | Out-Null
 }
-$logFile = Join-Path $logsDirectory "install_log_$timestamp.txt"
+$logFile = Join-Path $logsDirectory "install_log_$engine_$timestamp.txt"
 
 Write-Host ""
 Write-Host "Validating connection..." -ForegroundColor Blue
